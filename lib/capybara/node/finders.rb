@@ -103,6 +103,55 @@ module Capybara
 
       ##
       #
+      # Find an {Capybara::Node::Element} based on the given arguments that is also a sibling of the element called on. +sibling+ will raise an error if the element
+      # is not found.
+      #
+      # @!macro waiting_behavior
+      #   If the driver is capable of executing JavaScript, +$0+ will wait for a set amount of time
+      #   and continuously retry finding the element until either the element is found or the time
+      #   expires. The length of time +$0+ will wait is controlled through {Capybara.default_max_wait_time}
+      #   and defaults to 2 seconds.
+      #   @option options [false, Numeric] wait (Capybara.default_max_wait_time) Maximum time to wait for matching element to appear.
+      #
+      # +ancestor+ takes the same options as +all+.
+      #
+      #     element.sibling('#foo').find('.bar')
+      #     element.sibling(:xpath, './/div[contains(., "bar")]')
+      #     element.sibling('ul', text: 'Quox').click_link('Delete')
+      #
+      # @param (see Capybara::Node::Finders#all)
+      #
+      # @option options [Boolean] match        The matching strategy to use.
+      #
+      # @return [Capybara::Node::Element]      The found element
+      # @raise  [Capybara::ElementNotFound]    If the element can't be found before time expires
+      #
+      def sibling(*args, &optional_filter_block)
+        if args.last.is_a? Hash
+          args.last[:session_options] = session_options
+        else
+          args.push(session_options: session_options)
+        end
+        query = Capybara::Queries::SiblingQuery.new(*args, &optional_filter_block)
+        synchronize(query.wait) do
+          if (query.match == :smart or query.match == :prefer_exact)
+            result = query.resolve_for(self, true)
+            result = query.resolve_for(self, false) if result.empty? && query.supports_exact? && !query.exact?
+          else
+            result = query.resolve_for(self)
+          end
+          if query.match == :one or query.match == :smart and result.size > 1
+            raise Capybara::Ambiguous.new("Ambiguous match, found #{result.size} elements matching #{query.description}")
+          end
+          if result.empty?
+            raise Capybara::ElementNotFound.new("Unable to find #{query.description}")
+          end
+          result.first
+        end.tap(&:allow_reload!)
+      end
+
+      ##
+      #
       # Find a form field on the page. The field can be found by its name, id or label text.
       #
       # @overload find_field([locator], options={})
