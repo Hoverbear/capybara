@@ -52,6 +52,31 @@ module Capybara
         end.tap(&:allow_reload!)
       end
 
+      ##
+      #
+      # Find an {Capybara::Node::Element} based on the given arguments that is also an ancestor of the element called on. +ancestor+ will raise an error if the element
+      # is not found.
+      #
+      # @!macro waiting_behavior
+      #   If the driver is capable of executing JavaScript, +$0+ will wait for a set amount of time
+      #   and continuously retry finding the element until either the element is found or the time
+      #   expires. The length of time +ancestor+ will wait is controlled through {Capybara.default_max_wait_time}
+      #   and defaults to 2 seconds.
+      #   @option options [false, Numeric] wait (Capybara.default_max_wait_time) Maximum time to wait for matching element to appear.
+      #
+      # +ancestor+ takes the same options as +all+.
+      #
+      #     element.ancestor('#foo').find('.bar')
+      #     element.ancestor(:xpath, './/div[contains(., "bar")]')
+      #     element.ancestor('ul', text: 'Quox').click_link('Delete')
+      #
+      # @param (see Capybara::Node::Finders#all)
+      #
+      # @option options [Boolean] match        The matching strategy to use.
+      #
+      # @return [Capybara::Node::Element]      The found element
+      # @raise  [Capybara::ElementNotFound]    If the element can't be found before time expires
+      #
       def ancestor(*args, &optional_filter_block)
         if args.last.is_a? Hash
           args.last[:session_options] = session_options
