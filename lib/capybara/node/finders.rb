@@ -52,6 +52,30 @@ module Capybara
         end.tap(&:allow_reload!)
       end
 
+      def ancestor(*args, &optional_filter_block)
+        if args.last.is_a? Hash
+          args.last[:session_options] = session_options
+        else
+          args.push(session_options: session_options)
+        end
+        query = Capybara::Queries::AncestorQuery.new(*args, &optional_filter_block)
+        synchronize(query.wait) do
+          if (query.match == :smart or query.match == :prefer_exact)
+            result = query.resolve_for(self, true)
+            result = query.resolve_for(self, false) if result.empty? && query.supports_exact? && !query.exact?
+          else
+            result = query.resolve_for(self)
+          end
+          if query.match == :one or query.match == :smart and result.size > 1
+            raise Capybara::Ambiguous.new("Ambiguous match, found #{result.size} elements matching #{query.description}")
+          end
+          if result.empty?
+            raise Capybara::ElementNotFound.new("Unable to find #{query.description}")
+          end
+          result.first
+        end.tap(&:allow_reload!)
+      end
+
       ##
       #
       # Find a form field on the page. The field can be found by its name, id or label text.
